@@ -21,7 +21,7 @@ for i in range(len(states)):
     for j in range(len(rules)):
         currentRule = rules[j]
 
-        if currentState == currentRule[0] and currentRule[1] == "Î»":
+        if currentState == currentRule[0] and (currentRule[1] == "Î»" or currentRule[1] == "λ"):  # in my laptop λ is loaded as Î» so i have to check both
             if currentState not in statesLambdaClosure:
                 statesLambdaClosure[currentState] = [currentRule[2]]
             else:
@@ -36,8 +36,8 @@ for i in range(len(states)):
                 for k in range(len(rules)):
                     newCurrentRule = rules[k]
 
-                    if newCurrentState == newCurrentRule[0] and newCurrentRule[1] == "Î»" and newCurrentRule[2] not in \
-                            statesLambdaClosure[currentState]:
+                    if newCurrentState == newCurrentRule[0] and (newCurrentRule[1] == "Î»" or newCurrentRule[1] == "λ") and newCurrentRule[2] not in \
+                            statesLambdaClosure[currentState]:# in my laptop λ is loaded as Î» so i have to check both
                         statesLambdaClosure[currentState].append(newCurrentRule[2])
 
                 count += 1

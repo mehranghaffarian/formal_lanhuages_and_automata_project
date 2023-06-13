@@ -1,2 +1,2 @@
 a b
-a+bba+aa
+(a+b)^*b

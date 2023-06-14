@@ -21,19 +21,7 @@ class Language:
         languages_count += 1
 
 
-# def find_words_string_language(words):
-#     global languages_count
-#
-#     curr = None
-#     for a in words:
-#         if curr is None:
-#             curr = find_single_word_language(a)
-#         else:
-#             curr = find_languages_concatenation_language(curr, find_single_word_language(a))
-#
-#     return curr
-
-
+# implementing the third step to transfer RE to NFA
 def find_single_word_language(word):
     global languages_count
     language_name = "L" + str(languages_count)
@@ -45,18 +33,20 @@ def find_single_word_language(word):
     return Language(states, initial_states, final_state, rules)
 
 
+# implementing the 4.2 step to transfer RE to NFA
 def find_languages_concatenation_language(first_language: Language, second_language: Language):
     states = first_language.states.copy()
     states.extend(second_language.states)
     initial_states = first_language.initialStates.copy()
     final_states = second_language.finalStates.copy()
     rules = first_language.rules.copy()
-    rules.append([rules[-1][0], "λ", second_language.initialStates.copy()[0]])
+    rules.append([first_language.finalStates.copy()[-1], "λ", second_language.initialStates.copy()[0]])
     rules.extend(second_language.rules)
 
     return Language(states, initial_states, final_states, rules)
 
 
+# implementing the 4.1 step to transfer RE to NFA
 def find_languages_or_language(first_language: Language, second_language: Language):
     states = first_language.states.copy()
     states.extend(second_language.states)
@@ -68,14 +58,15 @@ def find_languages_or_language(first_language: Language, second_language: Langua
     rules.extend(second_language.rules)
 
     rules.append(["q0", "λ", first_language.initialStates.copy()[0]])
-    rules.append([first_language.finalStates.copy()[0], "λ", "q1"])
+    rules.append([first_language.finalStates.copy()[-1], "λ", "q1"])
 
     rules.append(["q0", "λ", second_language.initialStates.copy()[0]])
-    rules.append([second_language.finalStates.copy()[0], "λ", "q1"])
+    rules.append([second_language.finalStates.copy()[-1], "λ", "q1"])
 
     return Language(states, initial_states, final_states, rules)
 
 
+# implementing the 4.3 step to transfer RE to NFA, it also supports numeric powers such as 1, 2, 3, ...
 def find_language_power_language(lang: Language, power):
     states = lang.states.copy()
     states.append("q0")
@@ -93,30 +84,34 @@ def find_language_power_language(lang: Language, power):
     if power == "*":
         return core_lang
     else:
-        concatenated_lang = core_lang
+        concatenated_lang = find_single_word_language("λ")
 
-        for i in range(int(power)-1):
-            concatenated_lang = find_languages_concatenation_language(concatenated_lang, core_lang)
+        for i in range(int(power)):
+            concatenated_lang = find_languages_concatenation_language(concatenated_lang, lang)
         return concatenated_lang
 
 
+# the main loop to find the NFA, it iterates over the regular expression and in each step find the equivalent language
+# or finds the language in a parenthesis. the whole process is implemented recursively
+# in each call the previously figured is given to find the next language, sometimes it is None when we have to
+# determine the language in a parenthesis or when we have just started the process
 def find_language_from_re(given_data, previous_lang=None):
     finding_parenthesis_end = False
     language_in_parenthesis = ''
     for i in range(len(given_data)):
         c = given_data[i]
         if finding_parenthesis_end:
-            if c == ')':
+            if c == ')':  # determining the language in the parenthesis
                 parenthesis_lang = find_language_from_re(language_in_parenthesis)
-                if i == len(given_data) - 1:
+                if i == len(given_data) - 1:  # checking the data length to avoid index out of bound exception
                     if previous_lang is None:
                         return parenthesis_lang
                     else:
                         return find_languages_concatenation_language(previous_lang, parenthesis_lang)
                 else:
-                    if given_data[i+1] == '^':
+                    if given_data[i+1] == '^':  # finding the language with the power
                         powered_lang = find_language_power_language(parenthesis_lang, given_data[i + 2])
-                        if len(given_data) == i+3:
+                        if len(given_data) == i+3:  # checking the data length to avoid index out of bound exception
                             if previous_lang is None:
                                 return powered_lang
                             else:
@@ -141,13 +136,13 @@ def find_language_from_re(given_data, previous_lang=None):
             if c in alphabets:
                 single_word_lang = find_single_word_language(c)
                 if previous_lang is None:
-                    if i == len(given_data) - 1:
+                    if i == len(given_data) - 1:  # checking the data length to avoid index out of bound exception
                         return single_word_lang
                     else:
                         return find_language_from_re(given_data[i+1:len(given_data)], single_word_lang)
                 else:
                     curr_lang = find_languages_concatenation_language(previous_lang, single_word_lang)
-                    if i == len(given_data)-1:
+                    if i == len(given_data)-1:  # checking the data length to avoid index out of bound exception
                         return curr_lang
                     else:
                         return find_language_from_re(given_data[i+1:len(given_data)], curr_lang)
@@ -156,36 +151,54 @@ def find_language_from_re(given_data, previous_lang=None):
                                                   find_language_from_re(given_data[(i + 1):len(given_data)]))
             elif c == '(':
                 if previous_lang is None:
-                    finding_parenthesis_end = True
+                    finding_parenthesis_end = True  # starting to concatenate the string in the paranthesis
                 else:
                     return find_languages_concatenation_language(previous_lang,
                                                                  find_language_from_re(
                                                                      given_data[i:len(given_data)]))
-    return Language(["q-1"], ["q-1"], ["q-1"], "L-1")
+    return Language(["q-1"], ["q-1"], ["q-1"], ["L-1"])
 
 
 language = find_language_from_re(data[1])
-print(data[1])
-print(language.states)
-print(language.initialStates)
-print(language.finalStates)
-for a in language.rules:
-    print(a)
-
-# a b
-# (a+b)^*b
-# a(a+b)^*b(ab(ba)^*b)+a
 
 
-# 0 1
-# q0 q1 q2
-# q0
-# q1
-# q0 λ q1
-# q0 0 q1
-# q1 0 q0
-# q1 1 q1
-# q1 0 q2
-# q1 1 q2
-# q2 0 q2
-# q2 1 q1
+# renaming the states to see them better
+def find_state_new_name(state):
+    for i in range(len(language.states)):
+        if language.states[i] == state:
+            return "q" + str(i)
+    return "Unknown"
+
+
+# helper function to write the language properties in the file better
+def write_list(given_list, file_descriptor, is_rule=False):
+    final_string = ""
+    for t in given_list:
+        if isinstance(t, list):
+            if is_rule:
+                write_list(t, file_descriptor)
+            else:
+                final_string += "["
+                final_string += ", ".join(t)
+                final_string += "]"
+        else:
+            final_string += t
+        final_string += " "
+    file_descriptor.write(final_string + "\n")
+
+
+with open('NFA_Output_2.txt', 'w', encoding="utf-8") as destinationFile:
+    write_list(alphabets, destinationFile)
+    write_list([find_state_new_name(s) for s in language.states], destinationFile)
+    write_list([find_state_new_name(s) for s in language.initialStates], destinationFile)
+    write_list([find_state_new_name(s) for s in language.finalStates], destinationFile)
+    write_list([[find_state_new_name(r[0]), r[1], find_state_new_name(r[2])] for r in language.rules], destinationFile,
+               is_rule=True)
+destinationFile.close()
+
+print("In the output the states are renamed as follow:")
+for index in range(len(language.states)):
+    print(language.states[index], "->", "q" + str(index))
+
+print("Extra information are mentioned above enter anything to finish:")
+junk = input()

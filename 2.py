@@ -21,7 +21,8 @@ for i in range(len(states)):
     for j in range(len(rules)):
         currentRule = rules[j]
 
-        if currentState == currentRule[0] and (currentRule[1] == "Î»" or currentRule[1] == "λ"):  # in my laptop λ is loaded as Î» so i have to check both
+        if currentState == currentRule[0] and (currentRule[1] == "Î»" or currentRule[
+            1] == "λ"):  # in my laptop λ is loaded as Î» so i have to check both
             if currentState not in statesLambdaClosure:
                 statesLambdaClosure[currentState] = [currentRule[2]]
             else:
@@ -36,8 +37,9 @@ for i in range(len(states)):
                 for k in range(len(rules)):
                     newCurrentRule = rules[k]
 
-                    if newCurrentState == newCurrentRule[0] and (newCurrentRule[1] == "Î»" or newCurrentRule[1] == "λ") and newCurrentRule[2] not in \
-                            statesLambdaClosure[currentState]:# in my laptop λ is loaded as Î» so i have to check both
+                    if newCurrentState == newCurrentRule[0] and (
+                            newCurrentRule[1] == "Î»" or newCurrentRule[1] == "λ") and newCurrentRule[2] not in \
+                            statesLambdaClosure[currentState]:  # in my laptop λ is loaded as Î» so i have to check both
                         statesLambdaClosure[currentState].append(newCurrentRule[2])
 
                 count += 1
@@ -90,7 +92,8 @@ for currentState in newStates:
             break
         for finalState in finalStates:
             if finalState == currentSingleState or (
-                    currentSingleState in statesLambdaClosure and finalState in statesLambdaClosure[currentSingleState]):
+                    currentSingleState in statesLambdaClosure and finalState in statesLambdaClosure[
+                currentSingleState]):
                 isStateAdded = True
 
                 if len(newFinalStates) == 0:
@@ -103,6 +106,7 @@ for currentState in newStates:
                 break
 
 
+# helper function to write the language properties in the file better
 def write_list(given_list, file_descriptor, is_rule=False):
     final_string = ""
     for t in given_list:
@@ -116,9 +120,10 @@ def write_list(given_list, file_descriptor, is_rule=False):
         else:
             final_string += t
         final_string += " "
-    file_descriptor.write(final_string+"\n")
+    file_descriptor.write(final_string + "\n")
 
 
+# renaming the states to see them better
 def find_state_new_name(state):
     for a in range(len(newStates)):
         if newStates[a] == state:

@@ -21,17 +21,17 @@ class Language:
         languages_count += 1
 
 
-def find_words_string_language(words):
-    global languages_count
-
-    curr = None
-    for a in words:
-        if curr is None:
-            curr = find_single_word_language(a)
-        else:
-            curr = find_languages_concatenation_language(curr, find_single_word_language(a))
-
-    return curr
+# def find_words_string_language(words):
+#     global languages_count
+#
+#     curr = None
+#     for a in words:
+#         if curr is None:
+#             curr = find_single_word_language(a)
+#         else:
+#             curr = find_languages_concatenation_language(curr, find_single_word_language(a))
+#
+#     return curr
 
 
 def find_single_word_language(word):
@@ -76,58 +76,92 @@ def find_languages_or_language(first_language: Language, second_language: Langua
     return Language(states, initial_states, final_states, rules)
 
 
-def find_language_power_language(first_language: Language, power):
-    states = first_language.states.copy()
+def find_language_power_language(lang: Language, power):
+    states = lang.states.copy()
     states.append("q0")
     states.append("q1")
     initial_states = ["q0"]
     final_states = ["q1"]
-    rules = first_language.rules.copy()
+    rules = lang.rules.copy()
 
-    rules.append(["q0", "λ", first_language.initialStates.copy()[0]])
+    rules.append(["q0", "λ", lang.initialStates.copy()[0]])
     rules.append(["q0", "λ", "q1"])
-    rules.append([first_language.finalStates.copy()[-1], "λ", first_language.initialStates.copy()[0]])
+    rules.append([lang.finalStates.copy()[-1], "λ", lang.initialStates.copy()[0]])
+    rules.append([lang.finalStates.copy()[-1], "λ", "q1"])
 
-    return Language(states, initial_states, final_states, rules)
+    core_lang = Language(states, initial_states, final_states, rules)
+    if power == "*":
+        return core_lang
+    else:
+        concatenated_lang = core_lang
+
+        for i in range(int(power)-1):
+            concatenated_lang = find_languages_concatenation_language(concatenated_lang, core_lang)
+        return concatenated_lang
 
 
-def find_language_from_re(given_data, curr_lang=None):
+def find_language_from_re(given_data, previous_lang=None):
     finding_parenthesis_end = False
     language_in_parenthesis = ''
-    current_alphabets_string = ''
     for i in range(len(given_data)):
         c = given_data[i]
-        print(given_data, " -> ", c)
         if finding_parenthesis_end:
             if c == ')':
+                parenthesis_lang = find_language_from_re(language_in_parenthesis)
                 if i == len(given_data) - 1:
-                    return find_language_from_re(language_in_parenthesis)
+                    if previous_lang is None:
+                        return parenthesis_lang
+                    else:
+                        return find_languages_concatenation_language(previous_lang, parenthesis_lang)
                 else:
                     if given_data[i+1] == '^':
-                        powered_lang = find_language_power_language(find_language_from_re(language_in_parenthesis), given_data[i + 2])
-
-                        if len(given_data) > i+3:
-                            return find_language_from_re(given_data[i+3:len(given_data)], powered_lang)
+                        powered_lang = find_language_power_language(parenthesis_lang, given_data[i + 2])
+                        if len(given_data) == i+3:
+                            if previous_lang is None:
+                                return powered_lang
+                            else:
+                                return find_languages_concatenation_language(previous_lang, powered_lang)
                         else:
-                            return powered_lang
+                            if previous_lang is None:
+                                return find_language_from_re(given_data[i + 3:len(given_data)], powered_lang)
+                            else:
+                                return find_language_from_re(given_data[i + 3:len(given_data)],
+                                                             find_languages_concatenation_language(previous_lang,
+                                                                                                   powered_lang))
                     else:
-                        return find_languages_concatenation_language(find_language_from_re(language_in_parenthesis), given_data[i+1:len(given_data)])
+                        if previous_lang is None:
+                            return find_language_from_re(given_data[i + 1:len(given_data)], parenthesis_lang)
+                        else:
+                            return find_language_from_re(given_data[i + 1:len(given_data)],
+                                                         find_languages_concatenation_language(previous_lang,
+                                                                                               parenthesis_lang))
             else:
                 language_in_parenthesis += c
         else:
             if c in alphabets:
-                current_alphabets_string += c
-            elif c == '+':
-                return find_languages_or_language(find_words_string_language(current_alphabets_string),
+                single_word_lang = find_single_word_language(c)
+                if previous_lang is None:
+                    if i == len(given_data) - 1:
+                        return single_word_lang
+                    else:
+                        return find_language_from_re(given_data[i+1:len(given_data)], single_word_lang)
+                else:
+                    curr_lang = find_languages_concatenation_language(previous_lang, single_word_lang)
+                    if i == len(given_data)-1:
+                        return curr_lang
+                    else:
+                        return find_language_from_re(given_data[i+1:len(given_data)], curr_lang)
+            elif c == '+':  # there must be a previous lang otherwise the regular expression is not acceptable
+                return find_languages_or_language(previous_lang,
                                                   find_language_from_re(given_data[(i + 1):len(given_data)]))
             elif c == '(':
-                if len(current_alphabets_string) > 0:
-                    return find_languages_concatenation_language(find_words_string_language(current_alphabets_string),
+                if previous_lang is None:
+                    finding_parenthesis_end = True
+                else:
+                    return find_languages_concatenation_language(previous_lang,
                                                                  find_language_from_re(
                                                                      given_data[i:len(given_data)]))
-                else:
-                    finding_parenthesis_end = True
-    return find_words_string_language(current_alphabets_string)
+    return Language(["q-1"], ["q-1"], ["q-1"], "L-1")
 
 
 language = find_language_from_re(data[1])
@@ -135,7 +169,9 @@ print(data[1])
 print(language.states)
 print(language.initialStates)
 print(language.finalStates)
-print(language.rules)
+for a in language.rules:
+    print(a)
+
 # a b
 # (a+b)^*b
 # a(a+b)^*b(ab(ba)^*b)+a
